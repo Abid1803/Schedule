@@ -84,6 +84,13 @@
       cursor: pointer;
       font-weight: bold;
     }
+
+    footer {
+      margin-top: 40px;
+      font-size: 0.9em;
+      text-align: center;
+      opacity: 0.7;
+    }
   </style>
 </head>
 <body>
@@ -92,18 +99,22 @@
   <button class="toggle-btn" onclick="toggleTheme()">Toggle Theme</button>
   <div id="schedule"></div>
 
+  <footer>
+    This page was designed for personal use. It is not intended to showcase web development skills. It's simply my way of tracking my day.
+  </footer>
+
   <script>
     const schedule = [
       { start: "09:00", end: "12:00", task: "🧠 Core CS" },
       { start: "12:00", end: "13:00", task: "🍽️ Lunch + Rest" },
       { start: "13:00", end: "15:00", task: "🤖 Machine Learning Concepts / Practice" },
-      { start: "15:00", end: "17:00", task: "🧩 Aptitude (Verbal + Logical Reasoning)" },
+      { start: "15:00", end: "17:00", task: "🧹 Aptitude (Verbal + Logical Reasoning)" },
       { start: "17:00", end: "19:00", task: "🔁 Buffer" },
       { start: "19:00", end: "20:00", task: "🍛 Dinner" },
       { start: "20:00", end: "22:00", task: "🧪 DSA Practice" },
       { start: "22:00", end: "23:00", task: "🧪 DSA Practice" },
       { start: "23:00", end: "02:30", task: "🧪 DSA Practice" },
-      { start: "03:00", end: "08:00", task: "🛏️ Sleep" },
+      { start: "03:00", end: "08:00", task: "🛌 Sleep" },
     ];
 
     // Load saved theme or default to dark
