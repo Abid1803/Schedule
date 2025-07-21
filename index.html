@@ -1,162 +1,642 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daily Schedule</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Personal daily schedule tracker">
+  <title>My Daily Schedule</title>
+  <style>
+    :root {
+      --bg-color: #121212;
+      --header-bg: #1e1e1e;
+      --task-bg: #1f1f1f;
+      --current-bg: #333333;
+      --accent-color: #00ffcc;
+      --text-color: #ffffff;
+      --secondary-text: #bbbbbb;
+      --border-color: #555;
+      --completed-task: #2a2a2a;
+      --completed-text: #888888;
+    }
+
+    .light-theme {
+      --bg-color: #f5f5f5;
+      --header-bg: #e0e0e0;
+      --task-bg: #ffffff;
+      --current-bg: #e8e8e8;
+      --accent-color: #007a63;
+      --text-color: #000000;
+      --secondary-text: #555555;
+      --border-color: #ccc;
+      --completed-task: #f0f0f0;
+      --completed-text: #aaaaaa;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    header {
+      width: 100%;
+      padding: 15px 20px;
+      text-align: center;
+      background-color: var(--header-bg);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      transition: background-color 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-content {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .time-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .clock {
+      font-size: 1.2em;
+      font-family: 'Courier New', monospace;
+      white-space: nowrap;
+    }
+
+    .task-countdown {
+      font-size: 1.2em;
+      color: var(--accent-color);
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+      white-space: nowrap;
+    }
+
+    .progress-container {
+      width: 90%;
+      max-width: 600px;
+      margin: 10px auto;
+      background-color: var(--task-bg);
+      border-radius: 5px;
+      height: 20px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background-color: var(--accent-color);
+      width: 0%;
+      transition: width 0.5s ease;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 5px;
+      font-size: 12px;
+      color: black;
+      font-weight: bold;
+    }
+
+    .scroll-container {
+      flex: 1;
+      overflow-y: auto;
+      width: 100%;
+      padding-top: 20px;
+      padding-bottom: 20px;
+      box-sizing: border-box;
+    }
+
+    .schedule {
+      width: 90%;
+      max-width: 600px;
+      margin: 0 auto 20px;
+    }
+
+    .task {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: var(--task-bg);
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      transition: all 0.3s ease;
+      transform-origin: top;
+    }
+
+    .task.completed {
+      background-color: var(--completed-task);
+      color: var(--completed-text);
+      text-decoration: line-through;
+    }
+
+    .task.new-task {
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .task .time {
+      text-align: left;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .task .activity {
+      text-align: right;
+      flex: 2;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .current {
+      background-color: var(--current-bg);
+      border: 2px solid var(--accent-color);
+      position: relative;
+    }
+
+    .footer {
+      margin-top: 20px;
+      padding: 20px;
+      text-align: center;
+      color: var(--secondary-text);
+      font-size: 0.9em;
+    }
+
+    .buttons {
+      margin: 10px auto;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .edit-area {
+      width: 90%;
+      max-width: 600px;
+      margin: 20px auto 0;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 10px;
+      font-size: 1em;
+      background-color: var(--task-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      resize: vertical;
+      transition: all 0.3s ease;
+    }
+
+    button {
+      padding: 10px 15px;
+      background-color: var(--accent-color);
+      border: none;
+      color: #000;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+      }
+      
+      .time-display {
+        flex-direction: column;
+        gap: 5px;
+      }
+      
+      .task {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .task .time, .task .activity {
+        text-align: left;
+        width: 100%;
+      }
+      
+      .buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="container mt-5">
-    <h1 class="text-center mb-4">Daily Schedule</h1>
-    <div id="clock" class="text-center mb-3" style="font-size: 24px;"></div>
-    <div id="countdown" class="text-center mb-3 font-weight-bold" style="font-size: 20px;"></div>
-    <div id="schedule"></div>
+  <header>
+    <div class="header-content">
+      <h1>My Daily Schedule</h1>
+    </div>
+    <div class="time-display">
+      <div class="clock" id="clock" aria-live="polite"></div>
+      <div class="task-countdown" id="taskCountdown"></div>
+    </div>
+  </header>
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar">0%</div>
   </div>
-
+  <main class="scroll-container">
+    <div class="schedule" id="schedule" role="list"></div>
+    <div class="buttons">
+      <button id="editBtn" onclick="toggleEdit()">Edit Tasks</button>
+      <button id="themeBtn" onclick="toggleTheme()">Toggle Theme</button>
+    </div>
+    <div class="edit-area hidden" id="editArea">
+      <textarea id="taskInput" aria-label="Edit schedule tasks"></textarea>
+      <button onclick="saveTasks()">Save</button>
+    </div>
+    <div class="footer">
+      This page was designed for personal use—not to showcase my knowledge in web development. It's just my way of tracking my day.
+    </div>
+  </main>
   <script>
-    const scheduleData = [
-      { time: "9:00 - 10:00", activity: "Operating Systems" },
-      { time: "10:00 - 11:00", activity: "Advanced DSA Practice" },
-      { time: "11:00 - 12:00", activity: "Aptitude + Verbal & Logical Reasoning" },
-      { time: "12:00 - 1:00", activity: "Break / Leisure" },
-      { time: "1:00 - 2:00", activity: "Machine Learning" },
-      { time: "2:00 - 3:00", activity: "Lunch / Rest" },
-      { time: "3:00 - 4:00", activity: "Mock Interviews / Projects" },
-      { time: "4:00 - 5:00", activity: "Core CS Revision (OS, DBMS, CN, OOPs)" },
-      { time: "5:00 - 6:00", activity: "Resume Building / Contest Review" },
-      { time: "6:00 - 7:00", activity: "Dinner & Relaxation" },
-      { time: "7:00 - 8:00", activity: "Free Time / Hobby Learning" },
-      { time: "8:00 - 10:00", activity: "CodeChef Weekly Contest (Wednesday) / DSA" },
-      { time: "10:00 - 11:00", activity: "Day Review + Plan Next Day" },
-    ];
+    // Cache DOM elements
+    const dom = {
+      scheduleEl: document.getElementById("schedule"),
+      taskInput: document.getElementById("taskInput"),
+      editArea: document.getElementById("editArea"),
+      clock: document.getElementById("clock"),
+      taskCountdown: document.getElementById("taskCountdown"),
+      editBtn: document.getElementById("editBtn"),
+      themeBtn: document.getElementById("themeBtn"),
+      progressBar: document.getElementById("progressBar")
+    };
 
+    // Constants
+    const defaultTasks = `09:00 – 12:00\tCore CS
+12:00 – 13:00\tLunch + Rest
+13:00 – 15:00\tMachine Learning Concepts / Practice
+15:00 – 17:00\tAptitude (Verbal + Logical Reasoning)
+17:00 – 19:00\tBuffer
+19:00 – 20:00\tDinner
+20:00 – 22:00\tDSA Practice
+22:00 – 23:00\tDSA Practice
+23:00 – 02:30\tDSA Practice
+03:00 – 08:00\tSleep`;
+
+    // State variables
+    let currentTask = null;
     let notificationTimeouts = [];
     let currentCountdownInterval = null;
+    let clockInterval = null;
     let lastResetCheck = null;
 
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadTasks();
+      startClock();
+      
+      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
+      
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(error => {
+          console.log('ServiceWorker registration failed: ', error);
+        });
+      }
+    });
+
+    function loadTasks() {
+      let tasks = localStorage.getItem("tasks") || defaultTasks;
+      const taskLines = tasks.trim().split("\n");
+      dom.scheduleEl.innerHTML = "";
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      
+      let totalTasks = 0;
+      let completedTasks = 0;
+      let lastEndMinutes = 0;
+
+      taskLines.forEach((line, index) => {
+        const [time, activity] = line.split(/\t+/);
+        if (!time || !activity) return;
+
+        const [startStr, endStr] = time.split("–").map(s => s.trim());
+        const startMinutes = parseTime(startStr);
+        const endMinutes = parseTime(endStr);
+        const taskId = `task-${index}`;
+
+        if (endMinutes > lastEndMinutes) {
+          lastEndMinutes = endMinutes;
+        }
+
+        const taskEl = document.createElement("div");
+        taskEl.className = "task new-task";
+        taskEl.id = taskId;
+        taskEl.setAttribute("role", "listitem");
+        
+        const isCompleted = isCheckedToday(startMinutes);
+        if (isCompleted) {
+          taskEl.classList.add("completed");
+          completedTasks++;
+        }
+        totalTasks++;
+
+        if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+          taskEl.classList.add("current");
+          currentTask = {
+            id: taskId,
+            activity: activity,
+            endMinutes: endMinutes
+          };
+          notify(`Current Task: ${activity}`);
+          startCountdown();
+          scheduleTaskNotifications(startMinutes, endMinutes, activity);
+        }
+
+        taskEl.innerHTML = `
+          <div class="time">${time}</div>
+          <div class="activity">
+            <input type="checkbox" id="cb-${startMinutes}" 
+                   ${isCompleted ? "checked" : ""} 
+                   onchange="toggleComplete(${startMinutes}, '${taskId}')"
+                   aria-label="Mark ${activity} as completed">
+            ${activity}
+          </div>
+        `;
+
+        dom.scheduleEl.appendChild(taskEl);
+        
+        setTimeout(() => {
+          taskEl.classList.remove("new-task");
+        }, 500);
+      });
+      
+      updateProgressBar(completedTasks, totalTasks);
+    }
+
+    function updateProgressBar(completed, total) {
+      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+      dom.progressBar.style.width = `${percentage}%`;
+      dom.progressBar.textContent = `${percentage}%`;
+    }
+
     function parseTime(t) {
-      const match = t.match(/(\d{1,2}):(\d{2})/);
-      if (!match) return 0;
-      const hour = parseInt(match[1], 10);
-      const minute = parseInt(match[2], 10);
+      const [_, h, m] = t.match(/(\d{1,2}):(\d{2})/) || [];
+      let hour = parseInt(h);
+      let minute = parseInt(m || 0);
       return hour * 60 + minute;
     }
 
-    function showNotification(title, body) {
-      if (Notification.permission === 'granted') {
-        new Notification(title, { body });
+    function toggleEdit() {
+      dom.editArea.classList.toggle("hidden");
+      dom.taskInput.value = localStorage.getItem("tasks") || defaultTasks;
+      
+      if (!dom.editArea.classList.contains("hidden")) {
+        setTimeout(() => {
+          dom.taskInput.focus();
+        }, 100);
       }
     }
 
-    function scheduleTaskNotifications(startMin, endMin, activity) {
-      const now = new Date();
-      const currentMin = now.getHours() * 60 + now.getMinutes();
-
-      if (startMin > currentMin) {
-        notificationTimeouts.push(setTimeout(() => showNotification("Task Starting", `It's time for: ${activity}`), (startMin - currentMin) * 60000));
-      }
-
-      if (endMin > currentMin) {
-        notificationTimeouts.push(setTimeout(() => showNotification("Task Ended", `${activity} has ended.`), (endMin - currentMin) * 60000));
-      }
-    }
-
-    function startCountdown(endMinutes) {
-      if (currentCountdownInterval) clearInterval(currentCountdownInterval);
-
-      function updateCountdown() {
-        const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        const diff = endMinutes - currentMinutes;
-        const countdownDiv = document.getElementById("countdown");
-
-        if (diff > 0) {
-          const hours = Math.floor(diff / 60);
-          const minutes = diff % 60;
-          countdownDiv.textContent = `⏳ ${hours ? hours + " hr " : ""}${minutes} min remaining`;
-        } else {
-          countdownDiv.textContent = "✅ Task Completed or Starting Soon";
-          clearInterval(currentCountdownInterval);
+    function saveTasks() {
+      try {
+        const tasks = dom.taskInput.value.trim();
+        if (tasks) {
+          localStorage.setItem("tasks", tasks);
+          dom.editArea.classList.add("hidden");
+          loadTasks();
         }
+      } catch (e) {
+        console.error("Error saving tasks:", e);
       }
-
-      updateCountdown();
-      currentCountdownInterval = setInterval(updateCountdown, 60000);
     }
 
-    function loadTasks() {
-      notificationTimeouts.forEach(timeout => clearTimeout(timeout));
-      notificationTimeouts = [];
-      const container = document.getElementById("schedule");
-      container.innerHTML = "";
+    function toggleTheme() {
+      document.body.classList.toggle("light-theme");
+      localStorage.setItem("theme", document.body.classList.contains("light-theme") ? "light" : "dark");
+    }
 
+    function toggleComplete(id, taskId) {
+      try {
+        const completed = JSON.parse(localStorage.getItem("completed") || "{}");
+        const today = new Date().toDateString();
+        if (!completed[today]) completed[today] = {};
+        completed[today][id] = !completed[today][id];
+        localStorage.setItem("completed", JSON.stringify(completed));
+        
+        const taskEl = document.getElementById(taskId);
+        if (taskEl) {
+          taskEl.classList.toggle("completed");
+          updateProgressBarFromDOM();
+        }
+      } catch (e) {
+        console.error("Error toggling task completion:", e);
+      }
+    }
+
+    function updateProgressBarFromDOM() {
+      const tasks = document.querySelectorAll('.task');
+      const totalTasks = tasks.length;
+      const completedTasks = document.querySelectorAll('.task.completed').length;
+      updateProgressBar(completedTasks, totalTasks);
+    }
+
+    function isCheckedToday(id) {
+      try {
+        const completed = JSON.parse(localStorage.getItem("completed") || "{}");
+        const today = new Date().toDateString();
+        return completed[today] && completed[today][id];
+      } catch (e) {
+        console.error("Error checking task completion:", e);
+        return false;
+      }
+    }
+
+    function resetCheckboxesIfLastTaskFinished() {
       const now = new Date();
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
       const today = now.toDateString();
-      let currentTask = null;
 
-      scheduleData.forEach((task, index) => {
-        const [start, end] = task.time.split(" - ");
-        const startMin = parseTime(start);
-        const endMin = parseTime(end);
-        const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
-
-        if (isCurrent) {
-          currentTask = { ...task, startMinutes: startMin, endMinutes: endMin };
-        }
-
-        const taskDiv = document.createElement("div");
-        taskDiv.className = `border p-3 mb-2 ${isCurrent ? 'bg-warning' : ''}`;
-        taskDiv.innerHTML = `
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <strong>${task.time}</strong> — ${task.activity}
-            </div>
-            <input type="checkbox" id="task${index}" ${isCurrent ? "disabled" : ""}>
-          </div>
-        `;
-        container.appendChild(taskDiv);
-      });
-
-      if (currentTask) {
-        startCountdown(currentTask.endMinutes);
-        scheduleTaskNotifications(currentTask.startMinutes, currentTask.endMinutes, currentTask.activity);
+      // Only check reset if we haven't checked for this day yet
+      if (lastResetCheck === today) {
+        return;
       }
 
-      resetCheckboxesIfLastTaskFinished(currentMinutes, today);
-    }
+      const tasks = localStorage.getItem("tasks") || defaultTasks;
+      const taskLines = tasks.trim().split("\n");
+      let lastEndMinutes = 0;
 
-    function resetCheckboxesIfLastTaskFinished(currentMinutes, today) {
-      const lastTaskEnd = parseTime(scheduleData[scheduleData.length - 1].time.split(" - ")[1]);
-      if (currentMinutes >= lastTaskEnd && lastResetCheck !== today) {
-        scheduleData.forEach((_, i) => {
-          const checkbox = document.getElementById(`task${i}`);
-          if (checkbox) checkbox.checked = false;
-        });
+      taskLines.forEach(line => {
+        const [time] = line.split(/\t+/);
+        if (!time) return;
+        const [, endStr] = time.split("–").map(s => s.trim());
+        const endMinutes = parseTime(endStr);
+        if (endMinutes > lastEndMinutes) {
+          lastEndMinutes = endMinutes;
+        }
+      });
+
+      if (currentMinutes >= lastEndMinutes) {
+        localStorage.removeItem("completed");
         lastResetCheck = today;
+        loadTasks();
       }
     }
 
     function startClock() {
-      const clockDiv = document.getElementById("clock");
-      function updateClock() {
-        const now = new Date();
-        clockDiv.textContent = now.toLocaleTimeString();
+      if (clockInterval) {
+        clearInterval(clockInterval);
       }
+      
       updateClock();
-      setInterval(updateClock, 1000);
+      clockInterval = setInterval(() => {
+        updateClock();
+        resetCheckboxesIfLastTaskFinished();
+      }, 1000);
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      if ('Notification' in window) {
-        Notification.requestPermission();
+    function updateClock() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+      dom.clock.textContent = timeString;
+    }
+
+    function startCountdown() {
+      if (currentCountdownInterval) {
+        clearInterval(currentCountdownInterval);
       }
-      navigator.serviceWorker?.register("sw.js").catch(console.error);
-      loadTasks();
-      startClock();
-    });
+      
+      updateCountdown();
+      currentCountdownInterval = setInterval(updateCountdown, 1000);
+    }
+
+    function updateCountdown() {
+      if (!currentTask) {
+        dom.taskCountdown.textContent = "";
+        return;
+      }
+      
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const remainingMinutes = currentTask.endMinutes - currentMinutes;
+      
+      if (remainingMinutes <= 0) {
+        dom.taskCountdown.textContent = "Time's up!";
+        clearInterval(currentCountdownInterval);
+        return;
+      }
+      
+      const hours = Math.floor(remainingMinutes / 60);
+      const minutes = remainingMinutes % 60;
+      const seconds = 60 - now.getSeconds();
+      
+      let countdownText = "";
+      if (hours > 0) {
+        countdownText += `${hours}h `;
+      }
+      if (minutes > 0 || hours > 0) {
+        countdownText += `${minutes}m `;
+      }
+      countdownText += `${seconds}s left`;
+      
+      dom.taskCountdown.textContent = `${currentTask.activity}: ${countdownText}`;
+    }
+
+    function scheduleTaskNotifications(startMinutes, endMinutes, activity) {
+      notificationTimeouts.forEach(timeout => clearTimeout(timeout));
+      notificationTimeouts = [];
+      
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      
+      const tenMinBefore = endMinutes - 10;
+      const oneMinBefore = endMinutes - 1;
+      
+      if (tenMinBefore > currentMinutes) {
+        const timeout = (tenMinBefore - currentMinutes) * 60000;
+        notificationTimeouts.push(setTimeout(() => {
+          notify(`10 minutes left for: ${activity}`);
+        }, timeout));
+      }
+      
+      if (oneMinBefore > currentMinutes) {
+        const timeout = (oneMinBefore - currentMinutes) * 60000;
+        notificationTimeouts.push(setTimeout(() => {
+          notify(`1 minute left for: ${activity}`);
+        }, timeout));
+      }
+    }
+
+    function notify(message) {
+      if (!("Notification" in window)) return;
+      
+      if (Notification.permission === "granted") {
+        new Notification(message);
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") new Notification(message);
+        });
+      }
+      
+      const alertEl = document.createElement('div');
+      alertEl.textContent = message;
+      alertEl.style.position = 'fixed';
+      alertEl.style.bottom = '20px';
+      alertEl.style.right = '20px';
+      alertEl.style.padding = '10px';
+      alertEl.style.backgroundColor = 'var(--accent-color)';
+      alertEl.style.color = 'black';
+      alertEl.style.borderRadius = '5px';
+      alertEl.style.zIndex = '1000';
+      alertEl.style.animation = 'fadeIn 0.3s ease';
+      document.body.appendChild(alertEl);
+      
+      setTimeout(() => {
+        alertEl.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => {
+          document.body.removeChild(alertEl);
+        }, 300);
+      }, 5000);
+    }
+
+    if (localStorage.getItem("theme") === "light") {
+      document.body.classList.add("light-theme");
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeOut {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(10px); }
+      }
+    `;
+    document.head.appendChild(style);
   </script>
 </body>
 </html>
