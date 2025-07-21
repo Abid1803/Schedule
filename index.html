@@ -297,22 +297,23 @@
     };
 
     // Constants
-    const defaultTasks = `9:00 AM – 12:00 PM\tCore CS
-12:00 PM – 1:00 PM\tLunch + Rest
-1:00 PM – 3:00 PM\tMachine Learning Concepts / Practice
-3:00 PM – 5:00 PM\tAptitude (Verbal + Logical Reasoning)
-5:00 PM – 7:00 PM\tBuffer
-7:00 PM – 8:00 PM\tDinner
-8:00 PM – 10:00 PM\tDSA Practice
-10:00 PM – 11:00 PM\tDSA Practice
-11:00 PM – 2:30 AM\tDSA Practice
-3:00 AM – 8:00 AM\tSleep`;
+    const defaultTasks = `09:00 – 12:00\tCore CS
+12:00 – 13:00\tLunch + Rest
+13:00 – 15:00\tMachine Learning Concepts / Practice
+15:00 – 17:00\tAptitude (Verbal + Logical Reasoning)
+17:00 – 19:00\tBuffer
+19:00 – 20:00\tDinner
+20:00 – 22:00\tDSA Practice
+22:00 – 23:00\tDSA Practice
+23:00 – 02:30\tDSA Practice
+03:00 – 08:00\tSleep`;
 
     // State variables
     let currentTask = null;
     let notificationTimeouts = [];
     let currentCountdownInterval = null;
     let clockInterval = null;
+    let lastResetCheck = null;
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
@@ -406,11 +407,9 @@
     }
 
     function parseTime(t) {
-      const [_, h, m, period] = t.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i) || [];
+      const [_, h, m] = t.match(/(\d{1,2}):(\d{2})/) || [];
       let hour = parseInt(h);
       let minute = parseInt(m || 0);
-      if (period.toUpperCase() === "PM" && hour !== 12) hour += 12;
-      if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
       return hour * 60 + minute;
     }
 
@@ -482,6 +481,13 @@
     function resetCheckboxesIfLastTaskFinished() {
       const now = new Date();
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const today = now.toDateString();
+
+      // Only check reset if we haven't checked for this day yet
+      if (lastResetCheck === today) {
+        return;
+      }
+
       const tasks = localStorage.getItem("tasks") || defaultTasks;
       const taskLines = tasks.trim().split("\n");
       let lastEndMinutes = 0;
@@ -498,6 +504,7 @@
 
       if (currentMinutes >= lastEndMinutes) {
         localStorage.removeItem("completed");
+        lastResetCheck = today;
         loadTasks();
       }
     }
@@ -516,7 +523,7 @@
 
     function updateClock() {
       const now = new Date();
-      const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+      const timeString = now.toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
       dom.clock.textContent = timeString;
     }
 
