@@ -1,0 +1,29 @@
+body {
+  background-color: #f8f9fa;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+h1 {
+  color: #343a40;
+  font-weight: 700;
+}
+
+#clock {
+  font-weight: bold;
+  color: #007bff;
+}
+
+#countdown {
+  color: #28a745;
+}
+
+.border {
+  background-color: white;
+  border-left: 5px solid #007bff;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.border.bg-warning {
+  background-color: #fff3cd !important;
+  border-left: 5px solid #ffc107;
+}
