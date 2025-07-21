@@ -52,6 +52,7 @@
       justify-content: space-between;
       align-items: center;
       transition: background 0.3s, box-shadow 0.3s;
+      flex-wrap: wrap;
     }
 
     .light .task {
@@ -73,7 +74,7 @@
       font-weight: bold;
     }
 
-    .toggle-btn {
+    .toggle-btn, .save-btn {
       margin: 10px auto;
       display: block;
       padding: 8px 16px;
@@ -85,11 +86,28 @@
       font-weight: bold;
     }
 
-    footer {
-      margin-top: 40px;
+    textarea {
+      width: 100%;
+      height: 120px;
+      margin-top: 20px;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: monospace;
       font-size: 0.9em;
+    }
+
+    footer {
+      margin-top: 30px;
       text-align: center;
-      opacity: 0.7;
+      font-size: 0.8em;
+      opacity: 0.6;
+    }
+
+    @media (max-width: 600px) {
+      .task {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
@@ -99,27 +117,65 @@
   <button class="toggle-btn" onclick="toggleTheme()">Toggle Theme</button>
   <div id="schedule"></div>
 
+  <textarea id="customTasks" placeholder='Edit tasks here (format: "start - end - task")'>09:00 - 12:00 - 🧠 Core CS
+12:00 - 13:00 - 🍽️ Lunch + Rest
+13:00 - 15:00 - 🤖 Machine Learning Concepts / Practice
+15:00 - 17:00 - 🧩 Aptitude (Verbal + Logical Reasoning)
+17:00 - 19:00 - 🔁 Buffer
+19:00 - 20:00 - 🍛 Dinner
+20:00 - 22:00 - 🧪 DSA Practice
+22:00 - 23:00 - 🧪 DSA Practice
+23:00 - 02:30 - 🧪 DSA Practice
+03:00 - 08:00 - 🛏️ Sleep</textarea>
+  <button class="save-btn" onclick="updateScheduleFromInput()">Save Tasks</button>
+
   <footer>
-    This page was designed for personal use. It is not intended to showcase web development skills. It's simply my way of tracking my day.
+    This page was designed for personal use — not to showcase my knowledge in web development. It's just my way of tracking my day.
   </footer>
 
   <script>
-    const schedule = [
-      { start: "09:00", end: "12:00", task: "🧠 Core CS" },
-      { start: "12:00", end: "13:00", task: "🍽️ Lunch + Rest" },
-      { start: "13:00", end: "15:00", task: "🤖 Machine Learning Concepts / Practice" },
-      { start: "15:00", end: "17:00", task: "🧹 Aptitude (Verbal + Logical Reasoning)" },
-      { start: "17:00", end: "19:00", task: "🔁 Buffer" },
-      { start: "19:00", end: "20:00", task: "🍛 Dinner" },
-      { start: "20:00", end: "22:00", task: "🧪 DSA Practice" },
-      { start: "22:00", end: "23:00", task: "🧪 DSA Practice" },
-      { start: "23:00", end: "02:30", task: "🧪 DSA Practice" },
-      { start: "03:00", end: "08:00", task: "🛌 Sleep" },
-    ];
+    let schedule = [];
 
-    // Load saved theme or default to dark
-    const savedTheme = localStorage.getItem("theme") || "dark";
-    document.body.classList.add(savedTheme);
+    function parseTasks(text) {
+      const lines = text.trim().split('\n');
+      return lines.map(line => {
+        const [start, end, ...taskParts] = line.split(' - ');
+        return { start: start.trim(), end: end.trim(), task: taskParts.join(' - ').trim() };
+      });
+    }
+
+    function updateScheduleFromInput() {
+      const text = document.getElementById('customTasks').value;
+      schedule = parseTasks(text);
+      localStorage.setItem('schedule', JSON.stringify(schedule));
+      renderSchedule();
+    }
+
+    function loadSchedule() {
+      const saved = localStorage.getItem('schedule');
+      if (saved) {
+        schedule = JSON.parse(saved);
+        document.getElementById('customTasks').value = schedule.map(e => `${e.start} - ${e.end} - ${e.task}`).join('\n');
+      } else {
+        updateScheduleFromInput();
+      }
+    }
+
+    // Notifications
+    function requestNotificationPermission() {
+      if (Notification && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+    }
+
+    let lastNotifiedTask = null;
+
+    function notifyTaskChange(currentTask) {
+      if (Notification && Notification.permission === 'granted' && currentTask !== lastNotifiedTask) {
+        new Notification('New Task Started', { body: currentTask });
+        lastNotifiedTask = currentTask;
+      }
+    }
 
     function updateClock() {
       const now = new Date();
@@ -158,11 +214,14 @@
       const container = document.getElementById("schedule");
       container.innerHTML = "";
 
-      getCurrentTask().forEach((entry) => {
+      const enriched = getCurrentTask();
+      enriched.forEach((entry) => {
         const div = document.createElement("div");
         div.className = "task" + (entry.isCurrent ? " current" : "");
         div.innerHTML = `<span class="time">${entry.start} – ${entry.end}</span> <span>${entry.task}</span>`;
         container.appendChild(div);
+
+        if (entry.isCurrent) notifyTaskChange(entry.task);
       });
     }
 
@@ -174,6 +233,11 @@
       localStorage.setItem("theme", next);
     }
 
+    // Initialization
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    document.body.classList.add(savedTheme);
+    requestNotificationPermission();
+    loadSchedule();
     renderSchedule();
     updateClock();
     setInterval(renderSchedule, 60000);
