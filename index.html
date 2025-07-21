@@ -14,6 +14,8 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      height: 100vh;
+      overflow: hidden;
     }
 
     header {
@@ -21,7 +23,7 @@
       padding: 20px;
       text-align: center;
       background-color: #1e1e1e;
-      position: sticky;
+      position: fixed;
       top: 0;
       z-index: 1000;
     }
@@ -31,10 +33,18 @@
       margin-top: 5px;
     }
 
+    .scroll-container {
+      flex: 1;
+      overflow-y: auto;
+      width: 100%;
+      padding-top: 100px;
+      box-sizing: border-box;
+    }
+
     .schedule {
       width: 90%;
       max-width: 600px;
-      margin: 20px auto;
+      margin: 0 auto 20px auto;
     }
 
     .task {
@@ -71,10 +81,11 @@
     }
 
     .buttons {
-      margin-top: 10px;
+      margin: 10px auto;
       display: flex;
       justify-content: center;
       gap: 10px;
+      flex-wrap: wrap;
     }
 
     .hidden {
@@ -127,33 +138,31 @@
     <h1>My Daily Schedule</h1>
     <div class="clock" id="clock"></div>
   </header>
-  <div class="schedule" id="schedule"></div>
-
-  <div class="buttons">
-    <button onclick="toggleEdit()">Edit Tasks</button>
-    <button onclick="toggleTheme()">Toggle Theme</button>
+  <div class="scroll-container">
+    <div class="schedule" id="schedule"></div>
+    <div class="buttons">
+      <button onclick="toggleEdit()">Edit Tasks</button>
+      <button onclick="toggleTheme()">Toggle Theme</button>
+    </div>
+    <div class="edit-area hidden" id="editArea">
+      <textarea id="taskInput"></textarea>
+      <button onclick="saveTasks()">Save</button>
+    </div>
+    <div class="footer">
+      This page was designed for personal use—not to showcase my knowledge in web development. It's just my way of tracking my day.
+    </div>
   </div>
-
-  <div class="edit-area hidden" id="editArea">
-    <textarea id="taskInput"></textarea>
-    <button onclick="saveTasks()">Save</button>
-  </div>
-
-  <div class="footer">
-    This page was designed for personal use—not to showcase my knowledge in web development. It's just my way of tracking my day.
-  </div>
-
   <script>
-    const defaultTasks = `9:00 AM – 12:00 PM	Core CS
-12:00 PM – 1:00 PM	Lunch + Rest
-1:00 PM – 3:00 PM	Machine Learning Concepts / Practice
-3:00 PM – 5:00 PM	Aptitude (Verbal + Logical Reasoning)
-5:00 PM – 7:00 PM	Buffer
-7:00 PM – 8:00 PM	Dinner
-8:00 PM – 10:00 PM	DSA Practice
-10:00 PM – 11:00 PM	DSA Practice
-11:00 PM – 2:30 AM	DSA Practice
-3:00 AM – 8:00 AM	Sleep`;
+    const defaultTasks = `9:00 AM – 12:00 PM\tCore CS
+12:00 PM – 1:00 PM\tLunch + Rest
+1:00 PM – 3:00 PM\tMachine Learning Concepts / Practice
+3:00 PM – 5:00 PM\tAptitude (Verbal + Logical Reasoning)
+5:00 PM – 7:00 PM\tBuffer
+7:00 PM – 8:00 PM\tDinner
+8:00 PM – 10:00 PM\tDSA Practice
+10:00 PM – 11:00 PM\tDSA Practice
+11:00 PM – 2:30 AM\tDSA Practice
+3:00 AM – 8:00 AM\tSleep`;
 
     const scheduleEl = document.getElementById("schedule");
     const taskInput = document.getElementById("taskInput");
