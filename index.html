@@ -74,7 +74,7 @@
       font-weight: bold;
     }
 
-    .toggle-btn, .save-btn {
+    .toggle-btn, .save-btn, .edit-btn {
       margin: 10px auto;
       display: block;
       padding: 8px 16px;
@@ -86,10 +86,14 @@
       font-weight: bold;
     }
 
+    #editorContainer {
+      display: none;
+      margin-top: 20px;
+    }
+
     textarea {
       width: 100%;
       height: 120px;
-      margin-top: 20px;
       border-radius: 8px;
       padding: 10px;
       font-family: monospace;
@@ -116,8 +120,10 @@
   <div class="clock" id="clock"></div>
   <button class="toggle-btn" onclick="toggleTheme()">Toggle Theme</button>
   <div id="schedule"></div>
+  <button class="edit-btn" onclick="toggleEditor()">Edit Tasks</button>
 
-  <textarea id="customTasks" placeholder='Edit tasks here (format: "start - end - task")'>09:00 - 12:00 - 🧠 Core CS
+  <div id="editorContainer">
+    <textarea id="customTasks" placeholder='Edit tasks here (format: "start - end - task")'>09:00 - 12:00 - 🧠 Core CS
 12:00 - 13:00 - 🍽️ Lunch + Rest
 13:00 - 15:00 - 🤖 Machine Learning Concepts / Practice
 15:00 - 17:00 - 🧩 Aptitude (Verbal + Logical Reasoning)
@@ -127,7 +133,8 @@
 22:00 - 23:00 - 🧪 DSA Practice
 23:00 - 02:30 - 🧪 DSA Practice
 03:00 - 08:00 - 🛏️ Sleep</textarea>
-  <button class="save-btn" onclick="updateScheduleFromInput()">Save Tasks</button>
+    <button class="save-btn" onclick="updateScheduleFromInput()">Save Tasks</button>
+  </div>
 
   <footer>
     This page was designed for personal use — not to showcase my knowledge in web development. It's just my way of tracking my day.
@@ -140,7 +147,7 @@
       const lines = text.trim().split('\n');
       return lines.map(line => {
         const [start, end, ...taskParts] = line.split(' - ');
-        return { start: start.trim(), end: end.trim(), task: taskParts.join(' - ').trim() };
+        return { start: start.trim(), end: end.trim(), task: taskParts.join(' - ').trim(), completed: false };
       });
     }
 
@@ -149,6 +156,7 @@
       schedule = parseTasks(text);
       localStorage.setItem('schedule', JSON.stringify(schedule));
       renderSchedule();
+      toggleEditor();
     }
 
     function loadSchedule() {
@@ -161,11 +169,15 @@
       }
     }
 
-    // Notifications
-    function requestNotificationPermission() {
-      if (Notification && Notification.permission !== 'granted') {
-        Notification.requestPermission();
-      }
+    function toggleEditor() {
+      const editor = document.getElementById('editorContainer');
+      editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function toggleTaskCompletion(index) {
+      schedule[index].completed = !schedule[index].completed;
+      localStorage.setItem('schedule', JSON.stringify(schedule));
+      renderSchedule();
     }
 
     let lastNotifiedTask = null;
@@ -183,6 +195,12 @@
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const seconds = String(now.getSeconds()).padStart(2, '0');
       document.getElementById("clock").textContent = `⏰ ${hours}:${minutes}:${seconds}`;
+
+      if (hours === '08' && minutes === '00' && seconds === '00') {
+        schedule.forEach(task => task.completed = false);
+        localStorage.setItem('schedule', JSON.stringify(schedule));
+        renderSchedule();
+      }
     }
 
     function getCurrentTask() {
@@ -215,10 +233,13 @@
       container.innerHTML = "";
 
       const enriched = getCurrentTask();
-      enriched.forEach((entry) => {
+      enriched.forEach((entry, index) => {
         const div = document.createElement("div");
         div.className = "task" + (entry.isCurrent ? " current" : "");
-        div.innerHTML = `<span class="time">${entry.start} – ${entry.end}</span> <span>${entry.task}</span>`;
+        div.innerHTML = `
+          <input type="checkbox" ${entry.completed ? 'checked' : ''} onclick="toggleTaskCompletion(${index})" />
+          <span class="time">${entry.start} – ${entry.end}</span> <span>${entry.task}</span>
+        `;
         container.appendChild(div);
 
         if (entry.isCurrent) notifyTaskChange(entry.task);
@@ -233,10 +254,9 @@
       localStorage.setItem("theme", next);
     }
 
-    // Initialization
     const savedTheme = localStorage.getItem("theme") || "dark";
     document.body.classList.add(savedTheme);
-    requestNotificationPermission();
+    if (Notification && Notification.permission !== 'granted') Notification.requestPermission();
     loadSchedule();
     renderSchedule();
     updateClock();
