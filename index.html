@@ -54,22 +54,22 @@
       top: 0;
       z-index: 1000;
       transition: background-color 0.3s ease;
-    }
-
-    .header-container {
       display: flex;
       flex-direction: column;
       align-items: center;
+      gap: 10px;
+    }
+
+    .header-content {
       width: 100%;
+      max-width: 600px;
     }
 
     .time-display {
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      gap: 30px;
-      margin-top: 10px;
-      flex-wrap: wrap;
+      gap: 10px;
     }
 
     .clock {
@@ -84,7 +84,6 @@
       font-weight: bold;
       font-family: 'Courier New', monospace;
       white-space: nowrap;
-      text-align: center;
     }
 
     .progress-container {
@@ -229,6 +228,12 @@
     }
 
     @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+      }
+      
       .time-display {
         flex-direction: column;
         gap: 5px;
@@ -253,12 +258,12 @@
 </head>
 <body>
   <header>
-    <div class="header-container">
+    <div class="header-content">
       <h1>My Daily Schedule</h1>
-      <div class="time-display">
-        <div class="clock" id="clock" aria-live="polite"></div>
-        <div class="task-countdown" id="taskCountdown"></div>
-      </div>
+    </div>
+    <div class="time-display">
+      <div class="clock" id="clock" aria-live="polite"></div>
+      <div class="task-countdown" id="taskCountdown"></div>
     </div>
   </header>
   <div class="progress-container">
@@ -314,12 +319,10 @@
       loadTasks();
       startClock();
       
-      // Check for notification permission on load
       if (Notification.permission !== "granted" && Notification.permission !== "denied") {
         Notification.requestPermission();
       }
       
-      // Register service worker for offline functionality
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').catch(error => {
           console.log('ServiceWorker registration failed: ', error);
@@ -336,6 +339,7 @@
       
       let totalTasks = 0;
       let completedTasks = 0;
+      let lastEndMinutes = 0;
 
       taskLines.forEach((line, index) => {
         const [time, activity] = line.split(/\t+/);
@@ -346,12 +350,16 @@
         const endMinutes = parseTime(endStr);
         const taskId = `task-${index}`;
 
+        if (endMinutes > lastEndMinutes) {
+          lastEndMinutes = endMinutes;
+        }
+
         const taskEl = document.createElement("div");
         taskEl.className = "task new-task";
         taskEl.id = taskId;
         taskEl.setAttribute("role", "listitem");
         
-        const isCompleted = isCheckedToday(startMinutes, time);
+        const isCompleted = isCheckedToday(startMinutes);
         if (isCompleted) {
           taskEl.classList.add("completed");
           completedTasks++;
@@ -363,8 +371,7 @@
           currentTask = {
             id: taskId,
             activity: activity,
-            endMinutes: endMinutes,
-            timeString: time
+            endMinutes: endMinutes
           };
           notify(`Current Task: ${activity}`);
           startCountdown();
@@ -374,9 +381,9 @@
         taskEl.innerHTML = `
           <div class="time">${time}</div>
           <div class="activity">
-            <input type="checkbox" id="cb-${startMinutes}-${time}" 
+            <input type="checkbox" id="cb-${startMinutes}" 
                    ${isCompleted ? "checked" : ""} 
-                   onchange="toggleComplete(${startMinutes}, '${taskId}', '${time}')"
+                   onchange="toggleComplete(${startMinutes}, '${taskId}')"
                    aria-label="Mark ${activity} as completed">
             ${activity}
           </div>
@@ -384,13 +391,11 @@
 
         dom.scheduleEl.appendChild(taskEl);
         
-        // Remove new-task class after animation completes
         setTimeout(() => {
           taskEl.classList.remove("new-task");
         }, 500);
       });
       
-      // Update progress bar
       updateProgressBar(completedTasks, totalTasks);
     }
 
@@ -413,7 +418,6 @@
       dom.editArea.classList.toggle("hidden");
       dom.taskInput.value = localStorage.getItem("tasks") || defaultTasks;
       
-      // Focus the textarea when shown
       if (!dom.editArea.classList.contains("hidden")) {
         setTimeout(() => {
           dom.taskInput.focus();
@@ -436,22 +440,17 @@
 
     function toggleTheme() {
       document.body.classList.toggle("light-theme");
-      // Save theme preference
       localStorage.setItem("theme", document.body.classList.contains("light-theme") ? "light" : "dark");
     }
 
-    function toggleComplete(id, taskId, timeString) {
+    function toggleComplete(id, taskId) {
       try {
         const completed = JSON.parse(localStorage.getItem("completed") || "{}");
         const today = new Date().toDateString();
         if (!completed[today]) completed[today] = {};
-        
-        // Use both time and ID to create a unique key for each task
-        const taskKey = `${id}-${timeString}`;
-        completed[today][taskKey] = !completed[today][taskKey];
+        completed[today][id] = !completed[today][id];
         localStorage.setItem("completed", JSON.stringify(completed));
         
-        // Update UI
         const taskEl = document.getElementById(taskId);
         if (taskEl) {
           taskEl.classList.toggle("completed");
@@ -469,27 +468,50 @@
       updateProgressBar(completedTasks, totalTasks);
     }
 
-    function isCheckedToday(id, timeString) {
+    function isCheckedToday(id) {
       try {
         const completed = JSON.parse(localStorage.getItem("completed") || "{}");
         const today = new Date().toDateString();
-        const taskKey = `${id}-${timeString}`;
-        return completed[today] && completed[today][taskKey];
+        return completed[today] && completed[today][id];
       } catch (e) {
         console.error("Error checking task completion:", e);
         return false;
       }
     }
 
+    function resetCheckboxesIfLastTaskFinished() {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const tasks = localStorage.getItem("tasks") || defaultTasks;
+      const taskLines = tasks.trim().split("\n");
+      let lastEndMinutes = 0;
+
+      taskLines.forEach(line => {
+        const [time] = line.split(/\t+/);
+        if (!time) return;
+        const [, endStr] = time.split("–").map(s => s.trim());
+        const endMinutes = parseTime(endStr);
+        if (endMinutes > lastEndMinutes) {
+          lastEndMinutes = endMinutes;
+        }
+      });
+
+      if (currentMinutes >= lastEndMinutes) {
+        localStorage.removeItem("completed");
+        loadTasks();
+      }
+    }
+
     function startClock() {
-      // Clear any existing interval
       if (clockInterval) {
         clearInterval(clockInterval);
       }
       
-      // Update immediately and then every second
       updateClock();
-      clockInterval = setInterval(updateClock, 1000);
+      clockInterval = setInterval(() => {
+        updateClock();
+        resetCheckboxesIfLastTaskFinished();
+      }, 1000);
     }
 
     function updateClock() {
@@ -499,12 +521,10 @@
     }
 
     function startCountdown() {
-      // Clear any existing countdown
       if (currentCountdownInterval) {
         clearInterval(currentCountdownInterval);
       }
       
-      // Update immediately and then every second
       updateCountdown();
       currentCountdownInterval = setInterval(updateCountdown, 1000);
     }
@@ -520,14 +540,14 @@
       const remainingMinutes = currentTask.endMinutes - currentMinutes;
       
       if (remainingMinutes <= 0) {
-        dom.taskCountdown.textContent = `Time's up for: ${currentTask.activity}`;
+        dom.taskCountdown.textContent = "Time's up!";
         clearInterval(currentCountdownInterval);
         return;
       }
       
       const hours = Math.floor(remainingMinutes / 60);
       const minutes = remainingMinutes % 60;
-      const seconds = 60 - now.getSeconds(); // Count down seconds within the minute
+      const seconds = 60 - now.getSeconds();
       
       let countdownText = "";
       if (hours > 0) {
@@ -542,19 +562,15 @@
     }
 
     function scheduleTaskNotifications(startMinutes, endMinutes, activity) {
-      // Clear any existing notification timeouts
       notificationTimeouts.forEach(timeout => clearTimeout(timeout));
       notificationTimeouts = [];
       
       const now = new Date();
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const totalDuration = endMinutes - startMinutes;
       
-      // Calculate notification times (10 min before and 1 min before end)
       const tenMinBefore = endMinutes - 10;
       const oneMinBefore = endMinutes - 1;
       
-      // Only schedule if the notification time is in the future
       if (tenMinBefore > currentMinutes) {
         const timeout = (tenMinBefore - currentMinutes) * 60000;
         notificationTimeouts.push(setTimeout(() => {
@@ -581,7 +597,6 @@
         });
       }
       
-      // Also show an alert in the page (for browsers that block notifications)
       const alertEl = document.createElement('div');
       alertEl.textContent = message;
       alertEl.style.position = 'fixed';
@@ -603,12 +618,10 @@
       }, 5000);
     }
 
-    // Load saved theme preference
     if (localStorage.getItem("theme") === "light") {
       document.body.classList.add("light-theme");
     }
 
-    // Add fadeOut animation for alerts
     const style = document.createElement('style');
     style.textContent = `
       @keyframes fadeOut {
