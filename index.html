@@ -54,22 +54,21 @@
       top: 0;
       z-index: 1000;
       transition: background-color 0.3s ease;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
     }
 
-    .header-content {
-      flex: 1;
-      min-width: 0;
+    .header-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
     }
 
     .time-display {
       display: flex;
-      align-items: center;
-      gap: 20px;
       justify-content: center;
+      align-items: center;
+      gap: 30px;
+      margin-top: 10px;
       flex-wrap: wrap;
     }
 
@@ -85,6 +84,7 @@
       font-weight: bold;
       font-family: 'Courier New', monospace;
       white-space: nowrap;
+      text-align: center;
     }
 
     .progress-container {
@@ -229,12 +229,6 @@
     }
 
     @media (max-width: 600px) {
-      header {
-        flex-direction: column;
-        gap: 10px;
-        padding: 10px;
-      }
-      
       .time-display {
         flex-direction: column;
         gap: 5px;
@@ -259,12 +253,12 @@
 </head>
 <body>
   <header>
-    <div class="header-content">
+    <div class="header-container">
       <h1>My Daily Schedule</h1>
-    </div>
-    <div class="time-display">
-      <div class="clock" id="clock" aria-live="polite"></div>
-      <div class="task-countdown" id="taskCountdown"></div>
+      <div class="time-display">
+        <div class="clock" id="clock" aria-live="polite"></div>
+        <div class="task-countdown" id="taskCountdown"></div>
+      </div>
     </div>
   </header>
   <div class="progress-container">
@@ -357,7 +351,7 @@
         taskEl.id = taskId;
         taskEl.setAttribute("role", "listitem");
         
-        const isCompleted = isCheckedToday(startMinutes);
+        const isCompleted = isCheckedToday(startMinutes, time);
         if (isCompleted) {
           taskEl.classList.add("completed");
           completedTasks++;
@@ -369,7 +363,8 @@
           currentTask = {
             id: taskId,
             activity: activity,
-            endMinutes: endMinutes
+            endMinutes: endMinutes,
+            timeString: time
           };
           notify(`Current Task: ${activity}`);
           startCountdown();
@@ -379,9 +374,9 @@
         taskEl.innerHTML = `
           <div class="time">${time}</div>
           <div class="activity">
-            <input type="checkbox" id="cb-${startMinutes}" 
+            <input type="checkbox" id="cb-${startMinutes}-${time}" 
                    ${isCompleted ? "checked" : ""} 
-                   onchange="toggleComplete(${startMinutes}, '${taskId}')"
+                   onchange="toggleComplete(${startMinutes}, '${taskId}', '${time}')"
                    aria-label="Mark ${activity} as completed">
             ${activity}
           </div>
@@ -445,12 +440,15 @@
       localStorage.setItem("theme", document.body.classList.contains("light-theme") ? "light" : "dark");
     }
 
-    function toggleComplete(id, taskId) {
+    function toggleComplete(id, taskId, timeString) {
       try {
         const completed = JSON.parse(localStorage.getItem("completed") || "{}");
         const today = new Date().toDateString();
         if (!completed[today]) completed[today] = {};
-        completed[today][id] = !completed[today][id];
+        
+        // Use both time and ID to create a unique key for each task
+        const taskKey = `${id}-${timeString}`;
+        completed[today][taskKey] = !completed[today][taskKey];
         localStorage.setItem("completed", JSON.stringify(completed));
         
         // Update UI
@@ -471,11 +469,12 @@
       updateProgressBar(completedTasks, totalTasks);
     }
 
-    function isCheckedToday(id) {
+    function isCheckedToday(id, timeString) {
       try {
         const completed = JSON.parse(localStorage.getItem("completed") || "{}");
         const today = new Date().toDateString();
-        return completed[today] && completed[today][id];
+        const taskKey = `${id}-${timeString}`;
+        return completed[today] && completed[today][taskKey];
       } catch (e) {
         console.error("Error checking task completion:", e);
         return false;
@@ -521,7 +520,7 @@
       const remainingMinutes = currentTask.endMinutes - currentMinutes;
       
       if (remainingMinutes <= 0) {
-        dom.taskCountdown.textContent = "Time's up!";
+        dom.taskCountdown.textContent = `Time's up for: ${currentTask.activity}`;
         clearInterval(currentCountdownInterval);
         return;
       }
