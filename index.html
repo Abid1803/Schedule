@@ -47,18 +47,44 @@
 
     header {
       width: 100%;
-      padding: 20px;
+      padding: 15px 20px;
       text-align: center;
       background-color: var(--header-bg);
       position: sticky;
       top: 0;
       z-index: 1000;
       transition: background-color 0.3s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .header-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .time-display {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
 
     .clock {
       font-size: 1.2em;
-      margin-top: 5px;
+      font-family: 'Courier New', monospace;
+      white-space: nowrap;
+    }
+
+    .task-countdown {
+      font-size: 1.2em;
+      color: var(--accent-color);
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+      white-space: nowrap;
     }
 
     .progress-container {
@@ -130,6 +156,7 @@
     .task .time {
       text-align: left;
       flex: 1;
+      min-width: 120px;
     }
 
     .task .activity {
@@ -145,13 +172,6 @@
       background-color: var(--current-bg);
       border: 2px solid var(--accent-color);
       position: relative;
-    }
-
-    .countdown {
-      font-size: 0.8em;
-      color: var(--accent-color);
-      font-weight: bold;
-      margin-left: 10px;
     }
 
     .footer {
@@ -209,6 +229,17 @@
     }
 
     @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+      }
+      
+      .time-display {
+        flex-direction: column;
+        gap: 5px;
+      }
+      
       .task {
         flex-direction: column;
         align-items: flex-start;
@@ -223,18 +254,18 @@
         flex-direction: column;
         align-items: center;
       }
-      
-      .countdown {
-        margin-left: 0;
-        margin-top: 5px;
-      }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>My Daily Schedule</h1>
-    <div class="clock" id="clock" aria-live="polite"></div>
+    <div class="header-content">
+      <h1>My Daily Schedule</h1>
+    </div>
+    <div class="time-display">
+      <div class="clock" id="clock" aria-live="polite"></div>
+      <div class="task-countdown" id="taskCountdown"></div>
+    </div>
   </header>
   <div class="progress-container">
     <div class="progress-bar" id="progressBar">0%</div>
@@ -260,6 +291,7 @@
       taskInput: document.getElementById("taskInput"),
       editArea: document.getElementById("editArea"),
       clock: document.getElementById("clock"),
+      taskCountdown: document.getElementById("taskCountdown"),
       editBtn: document.getElementById("editBtn"),
       themeBtn: document.getElementById("themeBtn"),
       progressBar: document.getElementById("progressBar")
@@ -278,15 +310,15 @@
 3:00 AM – 8:00 AM\tSleep`;
 
     // State variables
-    let currentTaskId = null;
+    let currentTask = null;
     let notificationTimeouts = [];
     let currentCountdownInterval = null;
+    let clockInterval = null;
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       loadTasks();
-      updateClock();
-      setInterval(updateClock, 30000); // Update every 30 seconds
+      startClock();
       
       // Check for notification permission on load
       if (Notification.permission !== "granted" && Notification.permission !== "denied") {
@@ -334,9 +366,13 @@
 
         if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
           taskEl.classList.add("current");
-          currentTaskId = taskId;
+          currentTask = {
+            id: taskId,
+            activity: activity,
+            endMinutes: endMinutes
+          };
           notify(`Current Task: ${activity}`);
-          startCountdown(endMinutes, taskEl);
+          startCountdown();
           scheduleTaskNotifications(startMinutes, endMinutes, activity);
         }
 
@@ -348,8 +384,6 @@
                    onchange="toggleComplete(${startMinutes}, '${taskId}')"
                    aria-label="Mark ${activity} as completed">
             ${activity}
-            ${currentMinutes >= startMinutes && currentMinutes < endMinutes ? 
-              '<span class="countdown" id="countdown-'+taskId+'"></span>' : ''}
           </div>
         `;
 
@@ -448,35 +482,64 @@
       }
     }
 
-    function updateClock() {
-      const now = new Date();
-      dom.clock.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    function startClock() {
+      // Clear any existing interval
+      if (clockInterval) {
+        clearInterval(clockInterval);
+      }
+      
+      // Update immediately and then every second
+      updateClock();
+      clockInterval = setInterval(updateClock, 1000);
     }
 
-    function startCountdown(endMinutes, taskEl) {
+    function updateClock() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+      dom.clock.textContent = timeString;
+    }
+
+    function startCountdown() {
       // Clear any existing countdown
       if (currentCountdownInterval) {
         clearInterval(currentCountdownInterval);
       }
       
-      const countdownEl = taskEl.querySelector('.countdown');
-      if (!countdownEl) return;
+      // Update immediately and then every second
+      updateCountdown();
+      currentCountdownInterval = setInterval(updateCountdown, 1000);
+    }
+
+    function updateCountdown() {
+      if (!currentTask) {
+        dom.taskCountdown.textContent = "";
+        return;
+      }
       
-      currentCountdownInterval = setInterval(() => {
-        const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        const remainingMinutes = endMinutes - currentMinutes;
-        
-        if (remainingMinutes <= 0) {
-          countdownEl.textContent = "Time's up!";
-          clearInterval(currentCountdownInterval);
-          return;
-        }
-        
-        const hours = Math.floor(remainingMinutes / 60);
-        const minutes = remainingMinutes % 60;
-        countdownEl.textContent = `${hours > 0 ? hours + 'h ' : ''}${minutes}m remaining`;
-      }, 1000);
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const remainingMinutes = currentTask.endMinutes - currentMinutes;
+      
+      if (remainingMinutes <= 0) {
+        dom.taskCountdown.textContent = "Time's up!";
+        clearInterval(currentCountdownInterval);
+        return;
+      }
+      
+      const hours = Math.floor(remainingMinutes / 60);
+      const minutes = remainingMinutes % 60;
+      const seconds = 60 - now.getSeconds(); // Count down seconds within the minute
+      
+      let countdownText = "";
+      if (hours > 0) {
+        countdownText += `${hours}h `;
+      }
+      if (minutes > 0 || hours > 0) {
+        countdownText += `${minutes}m `;
+      }
+      countdownText += `${seconds}s left`;
+      
+      dom.taskCountdown.textContent = `${currentTask.activity}: ${countdownText}`;
     }
 
     function scheduleTaskNotifications(startMinutes, endMinutes, activity) {
