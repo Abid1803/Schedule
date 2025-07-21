@@ -348,9 +348,13 @@
 
         const [startStr, endStr] = time.split("–").map(s => s.trim());
         const startMinutes = parseTime(startStr);
-        const endMinutes = parseTime(endStr);
+        let endMinutes = parseTime(endStr);
         const taskId = `task-${index}`;
 
+        // Adjust endMinutes for overnight tasks
+        if (endMinutes < startMinutes) {
+          endMinutes += 24 * 60; // Add 24 hours for tasks that cross midnight
+        }
         if (endMinutes > lastEndMinutes) {
           lastEndMinutes = endMinutes;
         }
@@ -367,16 +371,27 @@
         }
         totalTasks++;
 
-        if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+        // Handle current task for both same-day and overnight tasks
+        let isCurrent = false;
+        if (endMinutes <= 24 * 60) {
+          // Same-day task
+          isCurrent = currentMinutes >= startMinutes && currentMinutes < endMinutes;
+        } else {
+          // Overnight task
+          const adjustedCurrentMinutes = currentMinutes + (currentMinutes < startMinutes ? 24 * 60 : 0);
+          isCurrent = adjustedCurrentMinutes >= startMinutes && adjustedCurrentMinutes < endMinutes;
+        }
+
+        if (isCurrent) {
           taskEl.classList.add("current");
           currentTask = {
             id: taskId,
             activity: activity,
-            endMinutes: endMinutes
+            endMinutes: endMinutes % (24 * 60) // Use original endMinutes for countdown
           };
           notify(`Current Task: ${activity}`);
           startCountdown();
-          scheduleTaskNotifications(startMinutes, endMinutes, activity);
+          scheduleTaskNotifications(startMinutes, endMinutes % (24 * 60), activity);
         }
 
         taskEl.innerHTML = `
@@ -483,7 +498,6 @@
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
       const today = now.toDateString();
 
-      // Only check reset if we haven't checked for this day yet
       if (lastResetCheck === today) {
         return;
       }
@@ -496,13 +510,16 @@
         const [time] = line.split(/\t+/);
         if (!time) return;
         const [, endStr] = time.split("–").map(s => s.trim());
-        const endMinutes = parseTime(endStr);
+        let endMinutes = parseTime(endStr);
+        if (endMinutes < parseTime(time.split("–")[0].trim())) {
+          endMinutes += 24 * 60; // Adjust for overnight tasks
+        }
         if (endMinutes > lastEndMinutes) {
           lastEndMinutes = endMinutes;
         }
       });
 
-      if (currentMinutes >= lastEndMinutes) {
+      if (currentMinutes >= lastEndMinutes % (24 * 60)) {
         localStorage.removeItem("completed");
         lastResetCheck = today;
         loadTasks();
@@ -543,12 +560,24 @@
       }
       
       const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const remainingMinutes = currentTask.endMinutes - currentMinutes;
+      let currentMinutes = now.getHours() * 60 + now.getMinutes();
+      let endMinutes = currentTask.endMinutes;
+      
+      // Adjust for overnight tasks
+      if (endMinutes < (currentTask.endMinutes - (24 * 60))) {
+        if (currentMinutes < endMinutes) {
+          currentMinutes += 24 * 60;
+        }
+        endMinutes += 24 * 60;
+      }
+      
+      const remainingMinutes = endMinutes - currentMinutes;
       
       if (remainingMinutes <= 0) {
         dom.taskCountdown.textContent = "Time's up!";
         clearInterval(currentCountdownInterval);
+        currentTask = null;
+        loadTasks(); // Refresh to update current task
         return;
       }
       
@@ -573,7 +602,15 @@
       notificationTimeouts = [];
       
       const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      let currentMinutes = now.getHours() * 60 + now.getMinutes();
+      
+      // Adjust for overnight tasks
+      if (endMinutes < startMinutes) {
+        if (currentMinutes < endMinutes) {
+          currentMinutes += 24 * 60;
+        }
+        endMinutes += 24 * 60;
+      }
       
       const tenMinBefore = endMinutes - 10;
       const oneMinBefore = endMinutes - 1;
