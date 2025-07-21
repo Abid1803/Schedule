@@ -2,109 +2,111 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Live Daily Schedule</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Daily Schedule</title>
   <style>
-    :root {
-      --bg-light: #f4f4f4;
-      --bg-dark: #121212;
-      --text-light: #333;
-      --text-dark: #eee;
-      --card-light: white;
-      --card-dark: #1f1f1f;
-      --highlight: #198754;
-    }
-
     body {
       font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #121212;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
       padding: 20px;
-      max-width: 600px;
-      margin: auto;
-      transition: background 0.3s, color 0.3s;
-    }
-
-    body.light {
-      background: var(--bg-light);
-      color: var(--text-light);
-    }
-
-    body.dark {
-      background: var(--bg-dark);
-      color: var(--text-dark);
-    }
-
-    h1 {
       text-align: center;
+      background-color: #1e1e1e;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
     }
 
     .clock {
-      text-align: center;
       font-size: 1.2em;
-      margin-bottom: 20px;
-      font-weight: bold;
+      margin-top: 5px;
+    }
+
+    .schedule {
+      width: 90%;
+      max-width: 600px;
+      margin: 20px auto;
     }
 
     .task {
-      padding: 10px 15px;
-      margin: 10px 0;
-      border-radius: 8px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: background 0.3s, box-shadow 0.3s;
-      flex-wrap: wrap;
+      background-color: #1f1f1f;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 5px;
     }
 
-    .light .task {
-      background: var(--card-light);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    .task .time {
+      text-align: left;
+      flex: 1;
     }
 
-    .dark .task {
-      background: var(--card-dark);
-      box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+    .task .activity {
+      text-align: right;
+      flex: 2;
     }
 
     .current {
-      border-left: 5px solid var(--highlight);
-      font-weight: bold;
+      background-color: #333333;
+      border: 2px solid #00ffcc;
     }
 
-    .time {
-      font-weight: bold;
+    .footer {
+      margin-top: 40px;
+      padding: 20px;
+      text-align: center;
+      color: #bbbbbb;
+      font-size: 0.9em;
     }
 
-    .toggle-btn, .save-btn, .edit-btn {
-      margin: 10px auto;
-      display: block;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 5px;
-      background-color: #198754;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
+    .buttons {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
     }
 
-    #editorContainer {
+    .hidden {
       display: none;
+    }
+
+    .edit-area {
+      width: 90%;
+      max-width: 600px;
       margin-top: 20px;
     }
 
     textarea {
       width: 100%;
-      height: 120px;
-      border-radius: 8px;
+      height: 200px;
       padding: 10px;
-      font-family: monospace;
-      font-size: 0.9em;
+      font-size: 1em;
+      background-color: #1f1f1f;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 5px;
+      resize: vertical;
     }
 
-    footer {
-      margin-top: 30px;
-      text-align: center;
-      font-size: 0.8em;
-      opacity: 0.6;
+    button {
+      padding: 10px 15px;
+      background-color: #00ffcc;
+      border: none;
+      color: #000;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
     }
 
     @media (max-width: 600px) {
@@ -112,156 +114,141 @@
         flex-direction: column;
         align-items: flex-start;
       }
+
+      .task .time, .task .activity {
+        text-align: left;
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>📅 Your Live Schedule</h1>
-  <div class="clock" id="clock"></div>
-  <button class="toggle-btn" onclick="toggleTheme()">Toggle Theme</button>
-  <div id="schedule"></div>
-  <button class="edit-btn" onclick="toggleEditor()">Edit Tasks</button>
+  <header>
+    <h1>My Daily Schedule</h1>
+    <div class="clock" id="clock"></div>
+  </header>
+  <div class="schedule" id="schedule"></div>
 
-  <div id="editorContainer">
-    <textarea id="customTasks" placeholder='Edit tasks here (format: "start - end - task")'>09:00 - 12:00 - 🧠 Core CS
-12:00 - 13:00 - 🍽️ Lunch + Rest
-13:00 - 15:00 - 🤖 Machine Learning Concepts / Practice
-15:00 - 17:00 - 🧩 Aptitude (Verbal + Logical Reasoning)
-17:00 - 19:00 - 🔁 Buffer
-19:00 - 20:00 - 🍛 Dinner
-20:00 - 22:00 - 🧪 DSA Practice
-22:00 - 23:00 - 🧪 DSA Practice
-23:00 - 02:30 - 🧪 DSA Practice
-03:00 - 08:00 - 🛏️ Sleep</textarea>
-    <button class="save-btn" onclick="updateScheduleFromInput()">Save Tasks</button>
+  <div class="buttons">
+    <button onclick="toggleEdit()">Edit Tasks</button>
+    <button onclick="toggleTheme()">Toggle Theme</button>
   </div>
 
-  <footer>
-    This page was designed for personal use — not to showcase my knowledge in web development. It's just my way of tracking my day.
-  </footer>
+  <div class="edit-area hidden" id="editArea">
+    <textarea id="taskInput"></textarea>
+    <button onclick="saveTasks()">Save</button>
+  </div>
+
+  <div class="footer">
+    This page was designed for personal use—not to showcase my knowledge in web development. It's just my way of tracking my day.
+  </div>
 
   <script>
-    let schedule = [];
+    const defaultTasks = `9:00 AM – 12:00 PM	Core CS
+12:00 PM – 1:00 PM	Lunch + Rest
+1:00 PM – 3:00 PM	Machine Learning Concepts / Practice
+3:00 PM – 5:00 PM	Aptitude (Verbal + Logical Reasoning)
+5:00 PM – 7:00 PM	Buffer
+7:00 PM – 8:00 PM	Dinner
+8:00 PM – 10:00 PM	DSA Practice
+10:00 PM – 11:00 PM	DSA Practice
+11:00 PM – 2:30 AM	DSA Practice
+3:00 AM – 8:00 AM	Sleep`;
 
-    function parseTasks(text) {
-      const lines = text.trim().split('\n');
-      return lines.map(line => {
-        const [start, end, ...taskParts] = line.split(' - ');
-        return { start: start.trim(), end: end.trim(), task: taskParts.join(' - ').trim(), completed: false };
-      });
-    }
+    const scheduleEl = document.getElementById("schedule");
+    const taskInput = document.getElementById("taskInput");
+    const editArea = document.getElementById("editArea");
 
-    function updateScheduleFromInput() {
-      const text = document.getElementById('customTasks').value;
-      schedule = parseTasks(text);
-      localStorage.setItem('schedule', JSON.stringify(schedule));
-      renderSchedule();
-      toggleEditor();
-    }
+    function loadTasks() {
+      let tasks = localStorage.getItem("tasks") || defaultTasks;
+      const taskLines = tasks.trim().split("\n");
+      scheduleEl.innerHTML = "";
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-    function loadSchedule() {
-      const saved = localStorage.getItem('schedule');
-      if (saved) {
-        schedule = JSON.parse(saved);
-        document.getElementById('customTasks').value = schedule.map(e => `${e.start} - ${e.end} - ${e.task}`).join('\n');
-      } else {
-        updateScheduleFromInput();
+      for (let line of taskLines) {
+        const [time, activity] = line.split(/\t+/);
+        if (!time || !activity) continue;
+
+        const [startStr, endStr] = time.split("–").map(s => s.trim());
+        const startMinutes = parseTime(startStr);
+        const endMinutes = parseTime(endStr);
+
+        const taskEl = document.createElement("div");
+        taskEl.className = "task";
+        if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+          taskEl.classList.add("current");
+          notify(`Current Task: ${activity}`);
+        }
+
+        taskEl.innerHTML = `
+          <div class="time">${time}</div>
+          <div class="activity">
+            <input type="checkbox" id="cb-${startMinutes}" ${isCheckedToday(startMinutes) ? "checked" : ""} onchange="toggleComplete(${startMinutes})"> ${activity}
+          </div>
+        `;
+
+        scheduleEl.appendChild(taskEl);
       }
     }
 
-    function toggleEditor() {
-      const editor = document.getElementById('editorContainer');
-      editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
+    function parseTime(t) {
+      const [_, h, m, period] = t.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i);
+      let hour = parseInt(h);
+      let minute = parseInt(m || 0);
+      if (period.toUpperCase() === "PM" && hour !== 12) hour += 12;
+      if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
+      return hour * 60 + minute;
     }
 
-    function toggleTaskCompletion(index) {
-      schedule[index].completed = !schedule[index].completed;
-      localStorage.setItem('schedule', JSON.stringify(schedule));
-      renderSchedule();
+    function toggleEdit() {
+      editArea.classList.toggle("hidden");
+      taskInput.value = localStorage.getItem("tasks") || defaultTasks;
     }
 
-    let lastNotifiedTask = null;
+    function saveTasks() {
+      localStorage.setItem("tasks", taskInput.value);
+      editArea.classList.add("hidden");
+      loadTasks();
+    }
 
-    function notifyTaskChange(currentTask) {
-      if (Notification && Notification.permission === 'granted' && currentTask !== lastNotifiedTask) {
-        new Notification('New Task Started', { body: currentTask });
-        lastNotifiedTask = currentTask;
+    function toggleTheme() {
+      document.body.classList.toggle("light-theme");
+    }
+
+    function notify(message) {
+      if (Notification.permission === "granted") {
+        new Notification(message);
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") new Notification(message);
+        });
       }
+    }
+
+    function toggleComplete(id) {
+      const completed = JSON.parse(localStorage.getItem("completed") || "{}");
+      const today = new Date().toDateString();
+      if (!completed[today]) completed[today] = {};
+      completed[today][id] = !completed[today][id];
+      localStorage.setItem("completed", JSON.stringify(completed));
+    }
+
+    function isCheckedToday(id) {
+      const completed = JSON.parse(localStorage.getItem("completed") || "{}");
+      const today = new Date().toDateString();
+      return completed[today] && completed[today][id];
     }
 
     function updateClock() {
       const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
-      document.getElementById("clock").textContent = `⏰ ${hours}:${minutes}:${seconds}`;
-
-      if (hours === '08' && minutes === '00' && seconds === '00') {
-        schedule.forEach(task => task.completed = false);
-        localStorage.setItem('schedule', JSON.stringify(schedule));
-        renderSchedule();
-      }
+      document.getElementById("clock").innerText = now.toLocaleTimeString();
     }
 
-    function getCurrentTask() {
-      const now = new Date();
-      let currentHour = now.getHours();
-      let currentMinute = now.getMinutes();
-      const currentTime = currentHour * 60 + currentMinute;
-
-      return schedule.map((entry) => {
-        let [sh, sm] = entry.start.split(":").map(Number);
-        let [eh, em] = entry.end.split(":").map(Number);
-        let start = sh * 60 + sm;
-        let end = eh * 60 + em;
-
-        if (end < start) end += 24 * 60;
-
-        const active =
-          (currentTime >= start && currentTime < end) ||
-          (start > end && (currentTime >= start || currentTime < end));
-
-        return {
-          ...entry,
-          isCurrent: active,
-        };
-      });
-    }
-
-    function renderSchedule() {
-      const container = document.getElementById("schedule");
-      container.innerHTML = "";
-
-      const enriched = getCurrentTask();
-      enriched.forEach((entry, index) => {
-        const div = document.createElement("div");
-        div.className = "task" + (entry.isCurrent ? " current" : "");
-        div.innerHTML = `
-          <input type="checkbox" ${entry.completed ? 'checked' : ''} onclick="toggleTaskCompletion(${index})" />
-          <span class="time">${entry.start} – ${entry.end}</span> <span>${entry.task}</span>
-        `;
-        container.appendChild(div);
-
-        if (entry.isCurrent) notifyTaskChange(entry.task);
-      });
-    }
-
-    function toggleTheme() {
-      const current = document.body.classList.contains("dark") ? "dark" : "light";
-      const next = current === "dark" ? "light" : "dark";
-      document.body.classList.remove(current);
-      document.body.classList.add(next);
-      localStorage.setItem("theme", next);
-    }
-
-    const savedTheme = localStorage.getItem("theme") || "dark";
-    document.body.classList.add(savedTheme);
-    if (Notification && Notification.permission !== 'granted') Notification.requestPermission();
-    loadSchedule();
-    renderSchedule();
-    updateClock();
-    setInterval(renderSchedule, 60000);
     setInterval(updateClock, 1000);
+    updateClock();
+
+    loadTasks();
   </script>
 </body>
 </html>
