@@ -343,17 +343,26 @@
       let lastEndMinutes = 0;
 
       taskLines.forEach((line, index) => {
-        const [time, activity] = line.split(/\t+/);
-        if (!time || !activity) return;
+        if (!line.trim()) return;
+        const [time, activity] = line.split(/\t+/).map(s => s.trim());
+        if (!time || !activity) {
+          console.warn(`Skipping malformed task line: ${line}`);
+          return;
+        }
 
-        const [startStr, endStr] = time.split("–").map(s => s.trim());
+        const timeMatch = time.match(/(\d{1,2}:\d{2})\s*–\s*(\d{1,2}:\d{2})/);
+        if (!timeMatch) {
+          console.warn(`Invalid time format in line: ${line}`);
+          return;
+        }
+
+        const [, startStr, endStr] = timeMatch;
         const startMinutes = parseTime(startStr);
         let endMinutes = parseTime(endStr);
         const taskId = `task-${index}`;
 
-        // Adjust endMinutes for overnight tasks
         if (endMinutes < startMinutes) {
-          endMinutes += 24 * 60; // Add 24 hours for tasks that cross midnight
+          endMinutes += 24 * 60;
         }
         if (endMinutes > lastEndMinutes) {
           lastEndMinutes = endMinutes;
@@ -371,27 +380,19 @@
         }
         totalTasks++;
 
-        // Handle current task for both same-day and overnight tasks
-        let isCurrent = false;
-        if (endMinutes <= 24 * 60) {
-          // Same-day task
-          isCurrent = currentMinutes >= startMinutes && currentMinutes < endMinutes;
-        } else {
-          // Overnight task
-          const adjustedCurrentMinutes = currentMinutes + (currentMinutes < startMinutes ? 24 * 60 : 0);
-          isCurrent = adjustedCurrentMinutes >= startMinutes && adjustedCurrentMinutes < endMinutes;
-        }
+        const adjustedCurrentMinutes = currentMinutes + (currentMinutes < startMinutes && endMinutes > 24 * 60 ? 24 * 60 : 0);
+        const isCurrent = adjustedCurrentMinutes >= startMinutes && adjustedCurrentMinutes < endMinutes;
 
         if (isCurrent) {
           taskEl.classList.add("current");
           currentTask = {
             id: taskId,
             activity: activity,
-            endMinutes: endMinutes % (24 * 60) // Use original endMinutes for countdown
+            endMinutes: endMinutes % (24 * 60) || endMinutes
           };
           notify(`Current Task: ${activity}`);
           startCountdown();
-          scheduleTaskNotifications(startMinutes, endMinutes % (24 * 60), activity);
+          scheduleTaskNotifications(startMinutes, endMinutes % (24 * 60) || endMinutes, activity);
         }
 
         taskEl.innerHTML = `
@@ -422,10 +423,13 @@
     }
 
     function parseTime(t) {
-      const [_, h, m] = t.match(/(\d{1,2}):(\d{2})/) || [];
-      let hour = parseInt(h);
-      let minute = parseInt(m || 0);
-      return hour * 60 + minute;
+      const match = t.match(/(\d{1,2}):(\d{2})/);
+      if (!match) {
+        console.warn(`Invalid time format: ${t}`);
+        return 0;
+      }
+      const [_, h, m] = match;
+      return parseInt(h) * 60 + parseInt(m);
     }
 
     function toggleEdit() {
@@ -442,11 +446,19 @@
     function saveTasks() {
       try {
         const tasks = dom.taskInput.value.trim();
-        if (tasks) {
-          localStorage.setItem("tasks", tasks);
-          dom.editArea.classList.add("hidden");
-          loadTasks();
+        const taskLines = tasks.split("\n");
+        const validTasks = taskLines.filter(line => {
+          const [time, activity] = line.split(/\t+/).map(s => s.trim());
+          const timeMatch = time && time.match(/(\d{1,2}:\d{2})\s*–\s*(\d{1,2}:\d{2})/);
+          return timeMatch && activity;
+        });
+        if (validTasks.length === 0) {
+          alert("Please enter at least one valid task (format: HH:MM – HH:MM    Activity)");
+          return;
         }
+        localStorage.setItem("tasks", tasks);
+        dom.editArea.classList.add("hidden");
+        loadTasks();
       } catch (e) {
         console.error("Error saving tasks:", e);
       }
@@ -509,17 +521,20 @@
       taskLines.forEach(line => {
         const [time] = line.split(/\t+/);
         if (!time) return;
-        const [, endStr] = time.split("–").map(s => s.trim());
+        const timeMatch = time.match(/(\d{1,2}:\d{2})\s*–\s*(\d{1,2}:\d{2})/);
+        if (!timeMatch) return;
+        const [, , endStr] = timeMatch;
         let endMinutes = parseTime(endStr);
-        if (endMinutes < parseTime(time.split("–")[0].trim())) {
-          endMinutes += 24 * 60; // Adjust for overnight tasks
+        const startMinutes = parseTime(timeMatch[1]);
+        if (endMinutes < startMinutes) {
+          endMinutes += 24 * 60;
         }
         if (endMinutes > lastEndMinutes) {
           lastEndMinutes = endMinutes;
         }
       });
 
-      if (currentMinutes >= lastEndMinutes % (24 * 60)) {
+      if (lastEndMinutes && currentMinutes >= (lastEndMinutes % (24 * 60))) {
         localStorage.removeItem("completed");
         lastResetCheck = today;
         loadTasks();
@@ -556,6 +571,7 @@
     function updateCountdown() {
       if (!currentTask) {
         dom.taskCountdown.textContent = "";
+        clearInterval(currentCountdownInterval);
         return;
       }
       
@@ -563,11 +579,7 @@
       let currentMinutes = now.getHours() * 60 + now.getMinutes();
       let endMinutes = currentTask.endMinutes;
       
-      // Adjust for overnight tasks
-      if (endMinutes < (currentTask.endMinutes - (24 * 60))) {
-        if (currentMinutes < endMinutes) {
-          currentMinutes += 24 * 60;
-        }
+      if (endMinutes < currentMinutes) {
         endMinutes += 24 * 60;
       }
       
@@ -577,7 +589,7 @@
         dom.taskCountdown.textContent = "Time's up!";
         clearInterval(currentCountdownInterval);
         currentTask = null;
-        loadTasks(); // Refresh to update current task
+        loadTasks();
         return;
       }
       
@@ -589,10 +601,7 @@
       if (hours > 0) {
         countdownText += `${hours}h `;
       }
-      if (minutes > 0 || hours > 0) {
-        countdownText += `${minutes}m `;
-      }
-      countdownText += `${seconds}s left`;
+      countdownText += `${minutes}m ${seconds}s left`;
       
       dom.taskCountdown.textContent = `${currentTask.activity}: ${countdownText}`;
     }
@@ -604,7 +613,6 @@
       const now = new Date();
       let currentMinutes = now.getHours() * 60 + now.getMinutes();
       
-      // Adjust for overnight tasks
       if (endMinutes < startMinutes) {
         if (currentMinutes < endMinutes) {
           currentMinutes += 24 * 60;
@@ -631,7 +639,10 @@
     }
 
     function notify(message) {
-      if (!("Notification" in window)) return;
+      if (!("Notification" in window)) {
+        console.warn("Notifications not supported");
+        return;
+      }
       
       if (Notification.permission === "granted") {
         new Notification(message);
@@ -646,18 +657,21 @@
       alertEl.style.position = 'fixed';
       alertEl.style.bottom = '20px';
       alertEl.style.right = '20px';
-      alertEl.style.padding = '10px';
+      alertEl.style.padding = '15px';
       alertEl.style.backgroundColor = 'var(--accent-color)';
-      alertEl.style.color = 'black';
+      alertEl.style.color = '#000';
       alertEl.style.borderRadius = '5px';
-      alertEl.style.zIndex = '1000';
+      alertEl.style.zIndex = '2000';
+      alertEl.style.opacity = '0.9';
       alertEl.style.animation = 'fadeIn 0.3s ease';
       document.body.appendChild(alertEl);
       
       setTimeout(() => {
         alertEl.style.animation = 'fadeOut 0.3s ease';
         setTimeout(() => {
-          document.body.removeChild(alertEl);
+          if (alertEl.parentNode) {
+            document.body.removeChild(alertEl);
+          }
         }, 300);
       }, 5000);
     }
